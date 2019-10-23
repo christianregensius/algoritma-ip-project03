@@ -1,0 +1,113 @@
+---
+title: "Pre-processing.Rmd"
+author: "Christian Regensius"
+date: "16/10/2019"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float:
+      collapsed: false
+    number_section: true
+    highlight: espresso
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+
+# setup chunk options
+knitr::opts_chunk$set(
+  echo = TRUE, # untuk menampilkan code didalam chunk ketika di knit
+  warning = FALSE, # untuk menghilangkan semua warning yang dihasilkan ketika menjalankan chunk
+  message = FALSE, # untuk menghilangkan semua pesan ketika menjalankan chunk
+  fig.align = "center"
+)
+
+options(scipen = 9999) # untuk mengatur output numerik supaya tidak scientific
+```
+
+```{r}
+# import libraries
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(scales)
+library(tidyr)
+library(stringr)
+```
+
+## Business Question
+How often do we mutate or promote our personel per department?
+
+## Read Data
+```{r}
+data_attrition <- read_csv("ip-attrition-dashboard/data_input/data-attrition.csv")
+glimpse(data_attrition)
+head(data_attrition)
+```
+
+## Exploratory data analysis
+```{r}
+career_per_dept <- data_attrition %>%
+#  select(department, years_at_company, years_in_current_role, years_since_last_promotion) %>% 
+  mutate(mutation_rate = years_in_current_role/years_at_company, promotion_rate = years_since_last_promotion/years_at_company, mutation_rate = replace_na(mutation_rate, 0), promotion_rate = replace_na(promotion_rate, 0), percent_salary_hike = percent_salary_hike/100)
+```
+
+```{r}
+summary_attrition <- data_attrition %>% 
+  group_by(department, attrition) %>% 
+  summarise(employee_count = sum(employee_count))
+```
+
+
+```{r}
+ggplot(summary_attrition, aes(x=reorder(summary_attrition$department, summary_attrition$employee_count), y=summary_attrition$employee_count)) +
+  geom_col() +
+  labs(x = "Department",
+       y = "Number of employee")+
+  geom_text(aes(label=summary_attrition$employee_count), 
+            nudge_y = 0.05*max(summary_attrition$employee_count))
+
+# ggplotly(test)
+```
+
+
+```{r}
+ggplot(summary_attrition, aes(x=reorder(summary_attrition$department,summary_attrition$count_personel), y=summary_attrition$count_personel, fill=summary_attrition$attrition))+
+  geom_bar(stat="identity", width=.3,position="dodge")+
+  coord_flip()+
+  labs(x = "Department", 
+       y = "Number of personel") +
+  geom_text(aes(label=summary_attrition$count_personel), position=position_dodge(width=0.3), vjust=0.3)+
+  theme_minimal()
+```
+
+
+
+```{r}
+summary_attrition2 <- data_attrition %>%
+  group_by(department) %>% 
+  summarise(count_personel = n())
+```
+
+```{r}
+ggplot(summary_attrition2, aes(x=reorder(summary_attrition2$department, summary_attrition2$count_personel), y=summary_attrition2$count_personel)) +
+  geom_col() +
+  coord_flip()+
+  labs(x = "Department", 
+       y = "Number of personel") +
+  geom_text(aes(label = summary_attrition2$count_personel), hjust = -0.1, size = 3)+
+  theme_minimal()
+
+```
+
+```{r}
+ggplot(career_per_dept, aes(x=career_per_dept$percent_salary_hike,y=career_per_dept$promotion_rate)) +
+  geom_col()
+```
+
+```{r}
+levels(unique(career_per_dept$department))
+```
+
